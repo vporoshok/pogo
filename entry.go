@@ -1,0 +1,228 @@
+package pogo
+
+import (
+	"fmt"
+	"io"
+	"strconv"
+
+	"github.com/pkg/errors"
+)
+
+// Entry present one message
+type Entry struct {
+	TComment    string
+	EComment    string
+	Reference   string
+	Flags       Flags
+	PrevMsgCtxt string
+	PrevMsgID   string
+	PrevMsgIDP  string
+	MsgCtxt     string
+	MsgID       string
+	MsgIDP      string
+	MsgStr      string
+	MsgStrP     []string
+	Obsolete    bool
+}
+
+var poStarters = []Starter{
+	// TComment
+	NewPlainStarter("# ", ""),
+	// EComment
+	NewPlainStarter("#. ", ""),
+	// Reference
+	NewPlainStarter("#: ", ""),
+	// Flags
+	NewPlainStarter("#, ", ""),
+	// PrevMsgCtxt
+	NewPlainStarter("#| ", "msgctxt "),
+	// PrevMsgID
+	NewPlainStarter("#| ", "msgid "),
+	// PrevMsgIDP
+	NewPlainStarter("#| ", "msgid_plural "),
+	// MsgCtxt
+	NewPlainStarter("", "msgctxt "),
+	NewPlainStarter("#~ ", "msgctxt "),
+	// MsgID
+	NewPlainStarter("", "msgid "),
+	NewPlainStarter("#~ ", "msgid "),
+	// MsgIDP
+	NewPlainStarter("", "msgid_plural "),
+	NewPlainStarter("#~ ", "msgid_plural "),
+	// MsgStr
+	NewPlainStarter("", "msgstr "),
+	// MsgStrP
+	NewRegexpStarter("", `msgstr\[\d+\] `),
+}
+
+// ReadEntry from scanner
+func ReadEntry(s *Scanner, pluralCount int) (entry Entry, err error) {
+	s.Starters = poStarters
+	for {
+		err = s.Scan()
+		if err != nil && errors.Cause(err) != io.EOF {
+			return
+		}
+		if applyErr := entry.applyBlock(s, pluralCount); applyErr != nil {
+			return entry, applyErr
+		}
+		if err != nil || s.IsBlankLine() {
+			return
+		}
+	}
+}
+
+func (entry *Entry) applyBlock(s *Scanner, pluralCount int) (err error) {
+	return recoverHandledError(func() {
+		entry.mustApplyBlock(s, pluralCount)
+	})
+}
+
+func (entry *Entry) mustApplyBlock(s *Scanner, pluralCount int) {
+	mustBeEmpty := func(text string) {
+		if text != "" {
+			panic(errors.Errorf("duplicate block %q at %d", s.Border+s.Prefix, s.Line))
+		}
+	}
+
+	if s.Border == "#~ " {
+		if entry.Obsolete {
+			return
+		}
+		if entry.MsgCtxt != "" ||
+			entry.MsgID != "" ||
+			entry.MsgIDP != "" ||
+			entry.MsgStr != "" ||
+			entry.MsgStrP != nil {
+			panic(errors.Errorf("mixed obsolete and not obsolete blocks at %d", s.Line-1))
+		}
+		entry.Obsolete = true
+	}
+	if s.Border == "" {
+		if entry.Obsolete {
+			panic(errors.Errorf("mixed obsolete and not obsolete blocks at %d", s.Line-1))
+		}
+	}
+
+	switch [2]string{s.Border, s.Prefix} {
+	case [2]string{"# ", ""}:
+		mustBeEmpty(entry.TComment)
+		entry.TComment = s.Buffer.String()
+	case [2]string{"#. ", ""}:
+		mustBeEmpty(entry.EComment)
+		entry.EComment = s.Buffer.String()
+	case [2]string{"#: ", ""}:
+		mustBeEmpty(entry.Reference)
+		entry.Reference = s.Buffer.String()
+	case [2]string{"#, ", ""}:
+		mustBeEmpty(entry.Flags.String())
+		entry.Flags.Parse(s.Buffer.String())
+	case [2]string{"#| ", "msgctxt "}:
+		mustBeEmpty(entry.PrevMsgCtxt)
+		entry.PrevMsgCtxt = s.Buffer.String()
+	case [2]string{"#| ", "msgid "}:
+		mustBeEmpty(entry.PrevMsgID)
+		entry.PrevMsgID = s.Buffer.String()
+	case [2]string{"#| ", "msgid_plural "}:
+		mustBeEmpty(entry.PrevMsgIDP)
+		entry.PrevMsgIDP = s.Buffer.String()
+	case [2]string{"", "msgctxt "},
+		[2]string{"#~ ", "msgctxt "}:
+		mustBeEmpty(entry.MsgCtxt)
+		entry.MsgCtxt = s.Buffer.String()
+	case [2]string{"", "msgid "},
+		[2]string{"#~ ", "msgid "}:
+		mustBeEmpty(entry.MsgID)
+		entry.MsgID = s.Buffer.String()
+	case [2]string{"", "msgid_plural "},
+		[2]string{"#~ ", "msgid_plural "}:
+		mustBeEmpty(entry.MsgIDP)
+		entry.MsgIDP = s.Buffer.String()
+	case [2]string{"", "msgstr "}:
+		mustBeEmpty(entry.MsgStr)
+		entry.MsgStr = s.Buffer.String()
+	default:
+		if entry.MsgStrP == nil {
+			entry.MsgStrP = make([]string, pluralCount)
+		}
+		n, err := strconv.Atoi(s.Prefix[7 : len(s.Prefix)-2])
+		if err != nil {
+			panic(errors.WithStack(err))
+		}
+		if n >= pluralCount {
+			panic(errors.Errorf("unknown plural form %d at %d", n, s.Line-1))
+		}
+		mustBeEmpty(entry.MsgStrP[n])
+		entry.MsgStrP[n] = s.Buffer.String()
+	}
+}
+
+// Print entry in PO format
+func (entry Entry) Print(f *Formatter) error {
+
+	return recoverHandledError(func() {
+		entry.mustPrint(f)
+	})
+}
+
+func (entry Entry) mustPrint(f *Formatter) {
+	mustFormat := func(text string) {
+		if err := f.Format(text); err != nil {
+			panic(err)
+		}
+	}
+
+	if entry.TComment != "" {
+		f.Border, f.Prefix = "# ", ""
+		mustFormat(entry.TComment)
+	}
+	if entry.EComment != "" {
+		f.Border, f.Prefix = "#. ", ""
+		mustFormat(entry.EComment)
+	}
+	if entry.Reference != "" {
+		f.Border, f.Prefix = "#: ", ""
+		mustFormat(entry.Reference)
+	}
+	if len(entry.Flags) > 0 {
+		f.Border, f.Prefix = "#, ", ""
+		mustFormat(entry.Flags.String())
+	}
+	if entry.PrevMsgCtxt != "" {
+		f.Border, f.Prefix = "#| ", "msgctxt "
+		mustFormat(entry.PrevMsgCtxt)
+	}
+	if entry.PrevMsgID != "" {
+		f.Border, f.Prefix = "#| ", "msgid "
+		mustFormat(entry.PrevMsgID)
+	}
+	if entry.PrevMsgIDP != "" {
+		f.Border, f.Prefix = "#| ", "msgid_plural "
+		mustFormat(entry.PrevMsgIDP)
+	}
+
+	f.Border = ""
+	if entry.Obsolete {
+		f.Border = "#~ "
+	}
+	if entry.MsgCtxt != "" {
+		f.Prefix = "msgctxt "
+		mustFormat(entry.MsgCtxt)
+	}
+	if entry.MsgID != "" {
+		f.Prefix = "msgid "
+		mustFormat(entry.MsgID)
+	}
+	if entry.MsgIDP != "" {
+		f.Prefix = "msgid_plural "
+		mustFormat(entry.MsgIDP)
+	}
+	if entry.MsgStr != "" {
+		f.Prefix = "msgstr "
+		mustFormat(entry.MsgStr)
+	}
+	for i := range entry.MsgStrP {
+		f.Prefix = fmt.Sprintf("msgstr[%d] ", i)
+		mustFormat(entry.MsgStrP[i])
+	}
+}
