@@ -20,6 +20,8 @@ type Scanner struct {
 	Prefix string
 	// Buffer of text of the last read block
 	Buffer *bytes.Buffer
+	// Line is current line number
+	Line int
 
 	input *bufio.Scanner
 }
@@ -40,27 +42,12 @@ func (s *Scanner) IsBlankLine() bool {
 }
 
 // Scan next block
-func (s *Scanner) Scan() (err error) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			type withStacktrace interface {
-				error
-				StackTrace() errors.StackTrace
-			}
-			if e, ok := rec.(withStacktrace); ok {
-				err = e
-			} else {
-				panic(rec)
-			}
-		}
-	}()
+func (s *Scanner) Scan() error {
 
-	s.read()
-
-	return nil
+	return recoverHandledError(s.mustScan)
 }
 
-func (s *Scanner) read() {
+func (s *Scanner) mustScan() {
 	s.Border, s.Prefix = "", ""
 	s.Buffer.Reset()
 	s.skipBlankLines()
@@ -71,6 +58,7 @@ func (s *Scanner) read() {
 		border += `"`
 	}
 	for s.input.Scan() {
+		s.Line++
 		if s.input.Text() == "" || !strings.HasPrefix(s.input.Text(), border) {
 			return
 		}
@@ -85,6 +73,7 @@ func (s *Scanner) read() {
 
 func (s *Scanner) skipBlankLines() {
 	for s.input.Text() == "" {
+		s.Line++
 		if !s.input.Scan() {
 			if s.input.Err() == nil {
 				panic(errors.WithStack(io.EOF))

@@ -31,27 +31,14 @@ func NewFormatter(w io.Writer) *Formatter {
 }
 
 // Format text
-func (f *Formatter) Format(text string) (err error) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			type withStacktrace interface {
-				error
-				StackTrace() errors.StackTrace
-			}
-			if e, ok := rec.(withStacktrace); ok {
-				err = e
-			} else {
-				panic(rec)
-			}
-		}
-	}()
+func (f *Formatter) Format(text string) error {
 
-	f.write(text)
-
-	return nil
+	return recoverHandledError(func() {
+		f.mustFormat(text)
+	})
 }
 
-func (f *Formatter) write(text string) {
+func (f *Formatter) mustFormat(text string) {
 	lines := f.splitLines(text)
 	if f.Prefix != "" {
 		f.mustWrite(f.output, f.Border)
