@@ -25,7 +25,6 @@ func TestReadEntry(t *testing.T) {
 		name   string
 		source string
 		plural int
-		result string
 		err    string
 	}{
 		{

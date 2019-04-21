@@ -8,6 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const prevBorder = "#| "
+
 // Entry present one message
 type Entry struct {
 	TComment    string
@@ -35,11 +37,11 @@ var poStarters = []Starter{
 	// Flags
 	NewPlainStarter("#, ", ""),
 	// PrevMsgCtxt
-	NewPlainStarter("#| ", "msgctxt "),
+	NewPlainStarter(prevBorder, "msgctxt "),
 	// PrevMsgID
-	NewPlainStarter("#| ", "msgid "),
+	NewPlainStarter(prevBorder, "msgid "),
 	// PrevMsgIDP
-	NewPlainStarter("#| ", "msgid_plural "),
+	NewPlainStarter(prevBorder, "msgid_plural "),
 	// MsgCtxt
 	NewPlainStarter("", "msgctxt "),
 	NewPlainStarter("#~ ", "msgctxt "),
@@ -78,13 +80,53 @@ func (entry *Entry) applyBlock(s *Scanner, pluralCount int) (err error) {
 	})
 }
 
+// nolint:gocyclo
 func (entry *Entry) mustApplyBlock(s *Scanner, pluralCount int) {
-	mustBeEmpty := func(text string) {
-		if text != "" {
-			panic(errors.Errorf("duplicate block %q at %d", s.Border+s.Prefix, s.Line))
-		}
-	}
+	entry.checkObsolete(s)
 
+	switch [2]string{s.Border, s.Prefix} {
+	case [2]string{"# ", ""}:
+		entry.mustBeEmpty(s, entry.TComment)
+		entry.TComment = s.Buffer.String()
+	case [2]string{"#. ", ""}:
+		entry.mustBeEmpty(s, entry.EComment)
+		entry.EComment = s.Buffer.String()
+	case [2]string{"#: ", ""}:
+		entry.mustBeEmpty(s, entry.Reference)
+		entry.Reference = s.Buffer.String()
+	case [2]string{"#, ", ""}:
+		entry.mustBeEmpty(s, entry.Flags.String())
+		entry.Flags.Parse(s.Buffer.String())
+	case [2]string{prevBorder, "msgctxt "}:
+		entry.mustBeEmpty(s, entry.PrevMsgCtxt)
+		entry.PrevMsgCtxt = s.Buffer.String()
+	case [2]string{prevBorder, "msgid "}:
+		entry.mustBeEmpty(s, entry.PrevMsgID)
+		entry.PrevMsgID = s.Buffer.String()
+	case [2]string{prevBorder, "msgid_plural "}:
+		entry.mustBeEmpty(s, entry.PrevMsgIDP)
+		entry.PrevMsgIDP = s.Buffer.String()
+	case [2]string{"", "msgctxt "},
+		[2]string{"#~ ", "msgctxt "}:
+		entry.mustBeEmpty(s, entry.MsgCtxt)
+		entry.MsgCtxt = s.Buffer.String()
+	case [2]string{"", "msgid "},
+		[2]string{"#~ ", "msgid "}:
+		entry.mustBeEmpty(s, entry.MsgID)
+		entry.MsgID = s.Buffer.String()
+	case [2]string{"", "msgid_plural "},
+		[2]string{"#~ ", "msgid_plural "}:
+		entry.mustBeEmpty(s, entry.MsgIDP)
+		entry.MsgIDP = s.Buffer.String()
+	case [2]string{"", "msgstr "}:
+		entry.mustBeEmpty(s, entry.MsgStr)
+		entry.MsgStr = s.Buffer.String()
+	default:
+		entry.updateMsgStrP(s, pluralCount)
+	}
+}
+
+func (entry *Entry) checkObsolete(s *Scanner) {
 	if s.Border == "#~ " {
 		if entry.Obsolete {
 			return
@@ -103,69 +145,39 @@ func (entry *Entry) mustApplyBlock(s *Scanner, pluralCount int) {
 			panic(errors.Errorf("mixed obsolete and not obsolete blocks at %d", s.Line-1))
 		}
 	}
+}
 
-	switch [2]string{s.Border, s.Prefix} {
-	case [2]string{"# ", ""}:
-		mustBeEmpty(entry.TComment)
-		entry.TComment = s.Buffer.String()
-	case [2]string{"#. ", ""}:
-		mustBeEmpty(entry.EComment)
-		entry.EComment = s.Buffer.String()
-	case [2]string{"#: ", ""}:
-		mustBeEmpty(entry.Reference)
-		entry.Reference = s.Buffer.String()
-	case [2]string{"#, ", ""}:
-		mustBeEmpty(entry.Flags.String())
-		entry.Flags.Parse(s.Buffer.String())
-	case [2]string{"#| ", "msgctxt "}:
-		mustBeEmpty(entry.PrevMsgCtxt)
-		entry.PrevMsgCtxt = s.Buffer.String()
-	case [2]string{"#| ", "msgid "}:
-		mustBeEmpty(entry.PrevMsgID)
-		entry.PrevMsgID = s.Buffer.String()
-	case [2]string{"#| ", "msgid_plural "}:
-		mustBeEmpty(entry.PrevMsgIDP)
-		entry.PrevMsgIDP = s.Buffer.String()
-	case [2]string{"", "msgctxt "},
-		[2]string{"#~ ", "msgctxt "}:
-		mustBeEmpty(entry.MsgCtxt)
-		entry.MsgCtxt = s.Buffer.String()
-	case [2]string{"", "msgid "},
-		[2]string{"#~ ", "msgid "}:
-		mustBeEmpty(entry.MsgID)
-		entry.MsgID = s.Buffer.String()
-	case [2]string{"", "msgid_plural "},
-		[2]string{"#~ ", "msgid_plural "}:
-		mustBeEmpty(entry.MsgIDP)
-		entry.MsgIDP = s.Buffer.String()
-	case [2]string{"", "msgstr "}:
-		mustBeEmpty(entry.MsgStr)
-		entry.MsgStr = s.Buffer.String()
-	default:
-		if entry.MsgStrP == nil {
-			entry.MsgStrP = make([]string, pluralCount)
-		}
-		n, err := strconv.Atoi(s.Prefix[7 : len(s.Prefix)-2])
-		if err != nil {
-			panic(errors.WithStack(err))
-		}
-		if n >= pluralCount {
-			panic(errors.Errorf("unknown plural form %d at %d", n, s.Line-1))
-		}
-		mustBeEmpty(entry.MsgStrP[n])
-		entry.MsgStrP[n] = s.Buffer.String()
+func (entry *Entry) updateMsgStrP(s *Scanner, pluralCount int) {
+	if entry.MsgStrP == nil {
+		entry.MsgStrP = make([]string, pluralCount)
+	}
+	n, err := strconv.Atoi(s.Prefix[7 : len(s.Prefix)-2])
+	if err != nil {
+		panic(errors.WithStack(err))
+	}
+	if n >= pluralCount {
+		panic(errors.Errorf("unknown plural form %d at %d", n, s.Line-1))
+	}
+	entry.mustBeEmpty(s, entry.MsgStrP[n])
+	entry.MsgStrP[n] = s.Buffer.String()
+}
+
+func (Entry) mustBeEmpty(s *Scanner, text string) {
+	if text != "" {
+		panic(errors.Errorf("duplicate block %q at %d", s.Border+s.Prefix, s.Line))
 	}
 }
 
 // Print entry in PO format
-func (entry Entry) Print(f *Formatter) error {
+func (entry *Entry) Print(f *Formatter) error {
 
 	return recoverHandledError(func() {
 		entry.mustPrint(f)
 	})
 }
 
-func (entry Entry) mustPrint(f *Formatter) {
+// nolint:gocyclo
+func (entry *Entry) mustPrint(f *Formatter) {
 	mustFormat := func(text string) {
 		if err := f.Format(text); err != nil {
 			panic(err)
@@ -189,15 +201,15 @@ func (entry Entry) mustPrint(f *Formatter) {
 		mustFormat(entry.Flags.String())
 	}
 	if entry.PrevMsgCtxt != "" {
-		f.Border, f.Prefix = "#| ", "msgctxt "
+		f.Border, f.Prefix = prevBorder, "msgctxt "
 		mustFormat(entry.PrevMsgCtxt)
 	}
 	if entry.PrevMsgID != "" {
-		f.Border, f.Prefix = "#| ", "msgid "
+		f.Border, f.Prefix = prevBorder, "msgid "
 		mustFormat(entry.PrevMsgID)
 	}
 	if entry.PrevMsgIDP != "" {
-		f.Border, f.Prefix = "#| ", "msgid_plural "
+		f.Border, f.Prefix = prevBorder, "msgid_plural "
 		mustFormat(entry.PrevMsgIDP)
 	}
 
