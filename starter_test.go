@@ -9,6 +9,8 @@ import (
 )
 
 func TestPlainScanner(t *testing.T) {
+	t.Parallel()
+
 	s := pogo.NewPlainStarter("#| ", "msgid ")
 	border, prefix, ok := s.Extract(`#| msgid "Some short text"`)
 	assert.Equal(t, "#| ", border)
@@ -19,6 +21,8 @@ func TestPlainScanner(t *testing.T) {
 }
 
 func TestRegexpScanner(t *testing.T) {
+	t.Parallel()
+
 	s := pogo.NewRegexpStarter(`#\| `, `msgstr\[\d+\] `)
 	border, prefix, ok := s.Extract(`#| msgstr[12] "Some short text"`)
 	assert.Equal(t, "#| ", border)

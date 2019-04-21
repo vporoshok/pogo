@@ -13,6 +13,8 @@ import (
 )
 
 func TestFormatter(t *testing.T) {
+	t.Parallel()
+
 	join := func(lines ...string) string {
 
 		return strings.Join(lines, "\n")
@@ -137,11 +139,15 @@ func (brokenWriter) Write(_ []byte) (int, error) {
 }
 
 func TestFormatterError(t *testing.T) {
+	t.Parallel()
+
 	f := pogo.NewFormatter(brokenWriter{})
 	assert.EqualError(t, f.Format("test"), "error")
 }
 
 func TestFormatterPanic(t *testing.T) {
+	t.Parallel()
+
 	f := pogo.NewFormatter(nil)
 	assert.Panics(t, func() {
 		_ = f.Format("test")
