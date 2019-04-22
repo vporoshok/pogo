@@ -83,7 +83,7 @@ func TestParsePluralRule(t *testing.T) {
 			err:    `1:2: invalid expression 'n'`,
 		},
 		{
-			name:   "unknown comparsion",
+			name:   "unknown comparison",
 			source: "n + 2",
 			err:    `1:6: invalid expression 'n + 2'`,
 		},
