@@ -97,7 +97,7 @@ func TestScanner(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		// nolint:scopelint
+		c := c
 		t.Run(c.name, func(t *testing.T) {
 			source := bytes.NewBufferString(c.source)
 			s := pogo.NewScanner(source)
@@ -106,6 +106,46 @@ func TestScanner(t *testing.T) {
 			assert.Equal(t, c.border, s.Border)
 			assert.Equal(t, c.prefix, s.Prefix)
 			assert.Equal(t, c.text, s.Buffer.String())
+		})
+	}
+}
+
+func TestScannerError(t *testing.T) {
+	t.Parallel()
+
+	join := func(lines ...string) string {
+
+		return strings.Join(lines, "\n")
+	}
+
+	cases := [...]struct {
+		name   string
+		source string
+		err    string
+	}{
+		{
+			name: "no starter found",
+			source: join(
+				`#) Some comment here`,
+			),
+			err: "no starter is matched line 1",
+		},
+	}
+
+	starters := []pogo.Starter{
+		pogo.NewPlainStarter("# ", ""),
+		pogo.NewPlainStarter("#| ", "msgid "),
+		pogo.NewPlainStarter("", "msgid "),
+		pogo.NewRegexpStarter("", `msgstr\[\d+\] `),
+	}
+
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			source := bytes.NewBufferString(c.source)
+			s := pogo.NewScanner(source)
+			s.Starters = starters
+			assert.EqualError(t, s.Scan(), c.err)
 		})
 	}
 }

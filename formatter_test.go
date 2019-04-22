@@ -87,7 +87,7 @@ func TestFormatter(t *testing.T) {
 			),
 		},
 		{
-			name: "transaltor comment",
+			name: "translator comment",
 			text: join(
 				"Some long text with break lines and",
 				"veryveryveryveryveryveryverylong word",
@@ -114,12 +114,25 @@ func TestFormatter(t *testing.T) {
 				``,
 			),
 		},
+		{
+			name: "prefix oneline",
+			text: join(
+				"Some short text",
+			),
+			border: "",
+			prefix: "msgid ",
+			width:  30,
+			result: join(
+				`msgid "Some short text"`,
+				``,
+			),
+		},
 	}
 
 	result := &bytes.Buffer{}
 	f := pogo.NewFormatter(result)
 	for _, c := range cases {
-		// nolint:scopelint
+		c := c
 		t.Run(c.name, func(t *testing.T) {
 			f.Border = c.border
 			f.Prefix = c.prefix
