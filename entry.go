@@ -53,8 +53,10 @@ var poStarters = []Starter{
 	NewPlainStarter("#~ ", "msgid_plural "),
 	// MsgStr
 	NewPlainStarter("", "msgstr "),
+	NewPlainStarter("#~ ", "msgstr "),
 	// MsgStrP
 	NewRegexpStarter("", `msgstr\[\d+\] `),
+	NewRegexpStarter("#~ ", `msgstr\[\d+\] `),
 }
 
 // ReadEntry from scanner
@@ -118,7 +120,8 @@ func (entry *Entry) mustApplyBlock(s *Scanner, pluralCount int) {
 		[2]string{"#~ ", "msgid_plural "}:
 		entry.mustBeEmpty(s, entry.MsgIDP)
 		entry.MsgIDP = s.Buffer.String()
-	case [2]string{"", "msgstr "}:
+	case [2]string{"", "msgstr "},
+		[2]string{"#~ ", "msgstr "}:
 		entry.mustBeEmpty(s, entry.MsgStr)
 		entry.MsgStr = s.Buffer.String()
 	default:

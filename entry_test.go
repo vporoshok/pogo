@@ -46,10 +46,27 @@ func TestReadEntry(t *testing.T) {
 			plural: 2,
 			err:    "",
 		},
+		{
+			name: "obsolete entry",
+			source: join(
+				`# TComment`,
+				`#. EComment`,
+				`#: Reference`,
+				`#, Flags`,
+				`#| msgctxt "PrevMsgCtxt"`,
+				`#| msgid "PrevMsgID"`,
+				`#| msgid_plural "PrevMsgIDP"`,
+				`#~ msgctxt "MsgCtxt"`,
+				`#~ msgid "MsgID"`,
+				`#~ msgstr "MsgStr"`,
+			),
+			plural: 2,
+			err:    "",
+		},
 	}
 
 	for _, c := range cases {
-		// nolint:scopelint
+		c := c
 		t.Run(c.name, func(t *testing.T) {
 			s := pogo.NewScanner(bytes.NewBufferString(c.source))
 			entry, err := pogo.ReadEntry(s, c.plural)
