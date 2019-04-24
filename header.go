@@ -17,7 +17,7 @@ var (
 	personRE    = regexp.MustCompile(personRER)
 	copyrightRE = regexp.MustCompile(`^Copyright \(C\) (.+)`)
 	packageRE   = regexp.MustCompile(`^This file is distributed under the same license as the (.+) package\.$`)
-	authorsRE   = regexp.MustCompile(fmt.Sprintf(`^(%s), ((\d+,\s+)+\d+)\.`, personRER))
+	authorsRE   = regexp.MustCompile(fmt.Sprintf(`^(%s), ((\d+,\s+)*\d+)\.$`, personRER))
 )
 
 // Person present an person
