@@ -14,6 +14,8 @@ import (
 )
 
 func TestHeader(t *testing.T) {
+	t.Parallel()
+
 	join := func(lines ...string) string {
 
 		return strings.Join(lines, "\n")
@@ -25,6 +27,7 @@ func TestHeader(t *testing.T) {
 		`# This file is distributed under the same license as the kdeedu package.`,
 		`# Pablo de Vicente <pablo@foo.com>, 2005, 2006, 2007, 2008.`,
 		`# Eloy Cuadra <eloy@bar.net>, 2007, 2008.`,
+		`#, fuzzy`,
 		`msgid ""`,
 		`msgstr ""`,
 		`"Project-Id-Version: kstars\n"`,
@@ -34,10 +37,11 @@ func TestHeader(t *testing.T) {
 		`"Last-Translator: Eloy Cuadra <eloy@bar.net>\n"`,
 		`"Language-Team: Spanish <kde-l10n-es@kde.org>\n"`,
 		`"Language: es_ES\n"`,
-		`"MIME-Version: 1.0\n"`,
 		`"Content-Type: text/plain; charset=UTF-8\n"`,
 		`"Content-Transfer-Encoding: 8bit\n"`,
-		`"Plural-Forms: nplurals=2; plural=n != 1;\n"`,
+		`"Plural-Forms: nplurals=3; plural=n%10 == 1 && n%100 != 11 ? 0 : n%10 >= 2 && n"`,
+		`"%10 <= 4 && (n%100 < 10 || n%100 >= 20) ? 1 : 2;\n"`,
+		`"MIME-Version: 1.0\n"`,
 	)))
 
 	entry, err := pogo.ReadEntry(s, 0)
@@ -47,7 +51,7 @@ func TestHeader(t *testing.T) {
 	header.FromEntry(&entry)
 	assert.Equal(t, "Translation of kstars.po into Spanish", header.Title)
 	assert.Equal(t, "2008 None", header.Copyright)
-	assert.Equal(t, "kdeedu", header.Package)
+	assert.Equal(t, "kdeedu", header.PackageLicense)
 	require.Len(t, header.Authors, 2)
 	assert.Equal(t, []struct {
 		pogo.Person
@@ -64,6 +68,7 @@ func TestHeader(t *testing.T) {
 	},
 		header.Authors,
 	)
+	assert.True(t, header.Fuzzy)
 	assert.Equal(t, "kstars", header.ProjectIDVersion)
 	assert.Equal(t, "http://bugs.kde.org", header.ReportMsgidBugsTo)
 	assert.Equal(t, time.Date(2008, time.September, 1, 9, 37, 0, 0, time.UTC), header.POTCreationDate)
@@ -74,5 +79,7 @@ func TestHeader(t *testing.T) {
 	assert.Equal(t, "text/plain; charset=UTF-8", header.ContentType)
 	assert.Equal(t, "8bit", header.ContentTransferEncoding)
 	assert.Equal(t, [][2]string{{"MIME-Version", "1.0"}}, header.Unknown)
-	assert.Equal(t, []string{"n != 1"}, header.PluralForms)
+
+	newEntry := header.ToEntry()
+	assert.Equal(t, entry, newEntry)
 }

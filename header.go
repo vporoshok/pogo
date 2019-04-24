@@ -18,7 +18,6 @@ var (
 	copyrightRE = regexp.MustCompile(`^Copyright \(C\) (.+)`)
 	packageRE   = regexp.MustCompile(`^This file is distributed under the same license as the (.+) package\.$`)
 	authorsRE   = regexp.MustCompile(fmt.Sprintf(`^(%s), ((\d+,\s+)+\d+)\.`, personRER))
-	pluralRE    = regexp.MustCompile(`^nplurals=\d+; plural=(.+);$`)
 )
 
 // Person present an person
@@ -44,10 +43,10 @@ func (person Person) String() string {
 
 // Header of po file
 type Header struct {
-	Title     string
-	Copyright string
-	Package   string
-	Authors   []struct {
+	Title          string
+	Copyright      string
+	PackageLicense string
+	Authors        []struct {
 		Person
 		Years []int
 	}
@@ -62,7 +61,7 @@ type Header struct {
 	ContentType             string
 	ContentTransferEncoding string
 	Unknown                 [][2]string
-	PluralForms             []string
+	PluralForms             PluralRules
 }
 
 // FromEntry parse entry as header
@@ -82,7 +81,7 @@ func (header *Header) parseEntryComment(comment string) {
 			header.Copyright = sub[1]
 		case packageRE.MatchString(line):
 			sub := packageRE.FindStringSubmatch(line)
-			header.Package = sub[1]
+			header.PackageLicense = sub[1]
 		case authorsRE.MatchString(line):
 			sub := authorsRE.FindStringSubmatch(line)
 			var person Person
@@ -106,41 +105,85 @@ func (header *Header) parseEntryMsgStr(text string) {
 		if len(split) != 2 {
 			continue
 		}
-		key, val := split[0], strings.TrimSpace(split[1])
-		switch key {
-		default:
-			header.Unknown = append(header.Unknown, [2]string{key, val})
-		case "Project-Id-Version":
-			header.ProjectIDVersion = val
-		case "Report-Msgid-Bugs-To":
-			header.ReportMsgidBugsTo = val
-		case "POT-Creation-Date":
-			header.POTCreationDate, _ = time.Parse(timeFormat, val)
-		case "PO-Revision-Date":
-			header.PORevisionDate, _ = time.Parse(timeFormat, val)
-		case "Last-Translator":
-			header.LastTranslator.Parse(val)
-		case "Language-Team":
-			header.LanguageTeam = val
-		case "Language":
-			header.Language = val
-		case "Content-Type":
-			header.ContentType = val
-		case "Content-Transfer-Encoding":
-			header.ContentTransferEncoding = val
-		case "Plural-Forms":
-			fmt.Println(val)
-			sub := pluralRE.FindStringSubmatch(val)
-			for _, rule := range strings.Split(sub[1], ";") {
-				header.PluralForms = append(header.PluralForms, strings.TrimSpace(rule))
-			}
-		}
+		header.parseKeyValue(split[0], strings.TrimSpace(split[1]))
+	}
+}
+
+// nolint:gocyclo
+func (header *Header) parseKeyValue(key, val string) {
+	switch key {
+	case "Project-Id-Version":
+		header.ProjectIDVersion = val
+	case "Report-Msgid-Bugs-To":
+		header.ReportMsgidBugsTo = val
+	case "POT-Creation-Date":
+		header.POTCreationDate, _ = time.Parse(timeFormat, val)
+	case "PO-Revision-Date":
+		header.PORevisionDate, _ = time.Parse(timeFormat, val)
+	case "Last-Translator":
+		header.LastTranslator.Parse(val)
+	case "Language-Team":
+		header.LanguageTeam = val
+	case "Language":
+		header.Language = val
+	case "Content-Type":
+		header.ContentType = val
+	case "Content-Transfer-Encoding":
+		header.ContentTransferEncoding = val
+	case "Plural-Forms":
+		header.PluralForms, _ = ParsePluralRules(val)
+	default:
+		header.Unknown = append(header.Unknown, [2]string{key, val})
 	}
 }
 
 // ToEntry format header to entry fields
 func (header *Header) ToEntry() Entry {
 	entry := Entry{}
+	entry.TComment = header.getEntryComment()
+	if header.Fuzzy {
+		entry.Flags.Add("fuzzy")
+	}
+	entry.MsgStr = header.getEntryMsgStr()
 
 	return entry
+}
+
+func (header *Header) getEntryComment() string {
+	res := &strings.Builder{}
+	_, _ = fmt.Fprintf(res, "%s.\n", header.Title)
+	if header.Copyright != "" {
+		_, _ = fmt.Fprintf(res, "Copyright (C) %s\n", header.Copyright)
+	}
+	if header.PackageLicense != "" {
+		_, _ = fmt.Fprintf(res, "This file is distributed under the same license as the %s package.\n", header.PackageLicense)
+	}
+	for i := range header.Authors {
+		_, _ = fmt.Fprint(res, header.Authors[i].Person.String())
+		for _, year := range header.Authors[i].Years {
+			_, _ = fmt.Fprintf(res, ", %d", year)
+		}
+		_, _ = fmt.Fprint(res, ".\n")
+	}
+
+	return strings.TrimSpace(res.String())
+}
+
+func (header *Header) getEntryMsgStr() string {
+	res := &strings.Builder{}
+	_, _ = fmt.Fprintln(res, "Project-Id-Version:", header.ProjectIDVersion)
+	_, _ = fmt.Fprintln(res, "Report-Msgid-Bugs-To:", header.ReportMsgidBugsTo)
+	_, _ = fmt.Fprintln(res, "POT-Creation-Date:", header.POTCreationDate.Format(timeFormat))
+	_, _ = fmt.Fprintln(res, "PO-Revision-Date:", header.PORevisionDate.Format(timeFormat))
+	_, _ = fmt.Fprintln(res, "Last-Translator:", header.LastTranslator)
+	_, _ = fmt.Fprintln(res, "Language-Team:", header.LanguageTeam)
+	_, _ = fmt.Fprintln(res, "Language:", header.Language)
+	_, _ = fmt.Fprintln(res, "Content-Type:", header.ContentType)
+	_, _ = fmt.Fprintln(res, "Content-Transfer-Encoding:", header.ContentTransferEncoding)
+	_, _ = fmt.Fprintln(res, "Plural-Forms:", header.PluralForms)
+	for i := range header.Unknown {
+		_, _ = fmt.Fprintf(res, "%s: %s\n", header.Unknown[i][0], header.Unknown[i][1])
+	}
+
+	return res.String()
 }
