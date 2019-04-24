@@ -38,6 +38,13 @@ func (f *Formatter) Format(text string) error {
 	})
 }
 
+// BreakLine add \n
+func (f *Formatter) BreakLine() error {
+	_, err := io.WriteString(f.output, "\n")
+
+	return errors.WithStack(err)
+}
+
 func (f *Formatter) mustFormat(text string) {
 	lines := f.splitLines(text)
 	if f.Prefix != "" {

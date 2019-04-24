@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -151,6 +152,10 @@ func (entry *Entry) checkObsolete(s *Scanner) {
 }
 
 func (entry *Entry) updateMsgStrP(s *Scanner, pluralCount int) {
+	if !strings.HasPrefix(s.Prefix, "msgstr[") {
+		fmt.Println(s.Prefix, s.Border, s.Buffer.String())
+		return
+	}
 	if entry.MsgStrP == nil {
 		entry.MsgStrP = make([]string, pluralCount)
 	}
@@ -172,21 +177,22 @@ func (Entry) mustBeEmpty(s *Scanner, text string) {
 }
 
 // Print entry in PO format
-func (entry *Entry) Print(f *Formatter) error {
+func (entry *Entry) Print(f *Formatter, width int) error {
 
 	return recoverHandledError(func() {
-		entry.mustPrint(f)
+		entry.mustPrint(f, width)
 	})
 }
 
 // nolint:gocyclo
-func (entry *Entry) mustPrint(f *Formatter) {
+func (entry *Entry) mustPrint(f *Formatter, width int) {
 	mustFormat := func(text string) {
 		if err := f.Format(text); err != nil {
 			panic(err)
 		}
 	}
 
+	f.Width = 0
 	if entry.TComment != "" {
 		f.Border, f.Prefix = "# ", ""
 		mustFormat(entry.TComment)
@@ -217,6 +223,7 @@ func (entry *Entry) mustPrint(f *Formatter) {
 	}
 
 	f.Border = ""
+	f.Width = width
 	if entry.Obsolete {
 		f.Border = "#~ "
 	}
@@ -224,15 +231,13 @@ func (entry *Entry) mustPrint(f *Formatter) {
 		f.Prefix = "msgctxt "
 		mustFormat(entry.MsgCtxt)
 	}
-	if entry.MsgID != "" {
-		f.Prefix = "msgid "
-		mustFormat(entry.MsgID)
-	}
+	f.Prefix = "msgid "
+	mustFormat(entry.MsgID)
 	if entry.MsgIDP != "" {
 		f.Prefix = "msgid_plural "
 		mustFormat(entry.MsgIDP)
 	}
-	if entry.MsgStr != "" {
+	if len(entry.MsgStrP) == 0 {
 		f.Prefix = "msgstr "
 		mustFormat(entry.MsgStr)
 	}
@@ -240,4 +245,24 @@ func (entry *Entry) mustPrint(f *Formatter) {
 		f.Prefix = fmt.Sprintf("msgstr[%d] ", i)
 		mustFormat(entry.MsgStrP[i])
 	}
+}
+
+// Update return merge result of entry with next version
+func (entry *Entry) Update(next *Entry) Entry {
+	res := *entry
+	res.EComment = next.EComment
+	if res.MsgCtxt != next.MsgCtxt {
+		res.PrevMsgCtxt, res.MsgCtxt = res.MsgCtxt, next.MsgCtxt
+		res.Flags.Add("fuzzy")
+	}
+	if res.MsgID != next.MsgID {
+		res.PrevMsgID, res.MsgID = res.MsgID, next.MsgID
+		res.Flags.Add("fuzzy")
+	}
+	if res.MsgIDP != next.MsgIDP {
+		res.PrevMsgIDP, res.MsgIDP = res.MsgIDP, next.MsgIDP
+		res.Flags.Add("fuzzy")
+	}
+
+	return res
 }

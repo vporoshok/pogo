@@ -40,10 +40,16 @@ func (rules PluralRules) Eval(n int) int {
 	return len(rules)
 }
 
+// Len is a number of rules
+func (rules PluralRules) Len() int {
+
+	return len(rules) + 1
+}
+
 // String implements fmt.Stringer
 func (rules PluralRules) String() string {
 	res := &strings.Builder{}
-	_, _ = fmt.Fprintf(res, "nplurals=%d; plural=", len(rules)+1)
+	_, _ = fmt.Fprintf(res, "nplurals=%d; plural=", rules.Len())
 	if len(rules) == 1 {
 		_, _ = fmt.Fprintf(res, "%s;", rules[0])
 	} else {

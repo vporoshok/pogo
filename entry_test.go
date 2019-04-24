@@ -77,7 +77,7 @@ func TestReadEntry(t *testing.T) {
 			require.Equal(t, io.EOF, errors.Cause(err), err)
 			b := &bytes.Buffer{}
 			f := pogo.NewFormatter(b)
-			require.NoError(t, entry.Print(f))
+			require.NoError(t, entry.Print(f, 0))
 			assert.Equal(t, c.source+"\n", b.String())
 		})
 	}
