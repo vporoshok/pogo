@@ -1,16 +1,138 @@
 package pogo
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 )
 
+var (
+	pluralAllRE  = regexp.MustCompile(`^nplurals\s*=\s*(\d+)\s*;\s*plural\s*=(.+);$`)
+	pluralRuleRE = regexp.MustCompile(`\s*([^?]+)\?\s*(\d+)\s*:(\s*(\d+)\s*)?`)
+)
+
+// PluralRules represent list of rules to evaluate which form should be used
+type PluralRules []PluralRule
+
+// Eval evaluate rules to find which form should be used
+func (rules PluralRules) Eval(n int) int {
+	if len(rules) == 1 {
+		if rules[0].Check(n) {
+
+			return 1
+		}
+
+		return 0
+	}
+	for i := range rules {
+		if rules[i].Check(n) {
+
+			return i
+		}
+	}
+
+	return len(rules)
+}
+
+// String implements fmt.Stringer
+func (rules PluralRules) String() string {
+	res := &strings.Builder{}
+	_, _ = fmt.Fprintf(res, "nplurals=%d; plural=", len(rules)+1)
+	if len(rules) == 1 {
+		_, _ = fmt.Fprintf(res, "%s;", rules[0])
+	} else {
+		for i := range rules {
+			_, _ = fmt.Fprintf(res, "%s ? %d : ", rules[i], i)
+		}
+		_, _ = fmt.Fprintf(res, "%d;", len(rules))
+	}
+
+	return res.String()
+}
+
+// ParsePluralRules from po format
+func ParsePluralRules(source string) (PluralRules, error) {
+	sub := pluralAllRE.FindStringSubmatch(source)
+	if len(sub) != 3 {
+
+		return nil, errors.New("invalid source format")
+	}
+	n, _ := strconv.Atoi(sub[1])
+	switch n {
+	case 0:
+
+		return nil, errors.New("nplurals shouldn't be zero")
+
+	case 1:
+		k, err := strconv.Atoi(strings.TrimSpace(sub[2]))
+		if err != nil {
+
+			return nil, errors.WithStack(err)
+		}
+		if k != 0 {
+
+			return nil, errors.Errorf("unexpected choice %d, expected 0", k)
+		}
+
+		return nil, nil
+
+	case 2:
+		rule, err := ParsePluralRule(sub[2])
+		if err != nil {
+
+			return nil, err
+		}
+
+		return PluralRules{rule}, nil
+
+	default:
+
+		return parsePluralRules(sub[2], n)
+	}
+}
+
+func parsePluralRules(source string, n int) (PluralRules, error) {
+	subs := pluralRuleRE.FindAllStringSubmatch(source, -1)
+	if len(subs) != n-1 {
+
+		return nil, errors.New("rules count missmatch")
+	}
+	res := make(PluralRules, n-1)
+	for i, sub := range subs {
+		k, _ := strconv.Atoi(sub[2])
+		if k != i {
+
+			return nil, errors.Errorf("unexpected choice %d, expected %d", k, i)
+		}
+		if i == n-2 {
+			o, _ := strconv.Atoi(sub[4])
+			if o != n-1 {
+
+				return nil, errors.Errorf("unexpected choice %d, expected %d", o, n-1)
+			}
+		}
+		rule, err := ParsePluralRule(strings.TrimSpace(sub[1]))
+		if err != nil {
+
+			return nil, err
+		}
+		res[i] = rule
+	}
+
+	return res, nil
+}
+
 // PluralRule is a condition to choose variant
-type PluralRule func(int) bool
+type PluralRule interface {
+	fmt.Stringer
+	Check(int) bool
+}
 
 // ParsePluralRule from source
 func ParsePluralRule(source string) (PluralRule, error) {
@@ -18,21 +140,111 @@ func ParsePluralRule(source string) (PluralRule, error) {
 	return ruleBuilder{source}.Build()
 }
 
-type evaluer func(int) int
+type evaluer struct {
+	source string
+	Eval   func(int) int
+}
 
-func number(n int) evaluer     { return func(x int) int { return n } }
-func equiv() evaluer           { return func(x int) int { return x } }
-func mod(a, b evaluer) evaluer { return func(x int) int { return a(x) % b(x) } }
+func (e evaluer) String() string {
 
-func eql(a, b evaluer) PluralRule { return func(n int) bool { return a(n) == b(n) } }
-func neq(a, b evaluer) PluralRule { return func(n int) bool { return a(n) != b(n) } }
-func gtr(a, b evaluer) PluralRule { return func(n int) bool { return a(n) > b(n) } }
-func geq(a, b evaluer) PluralRule { return func(n int) bool { return a(n) >= b(n) } }
-func lss(a, b evaluer) PluralRule { return func(n int) bool { return a(n) < b(n) } }
-func leq(a, b evaluer) PluralRule { return func(n int) bool { return a(n) <= b(n) } }
+	return e.source
+}
 
-func and(a, b PluralRule) PluralRule { return func(n int) bool { return a(n) && b(n) } }
-func or(a, b PluralRule) PluralRule  { return func(n int) bool { return a(n) || b(n) } }
+func number(n int) evaluer { return evaluer{strconv.Itoa(n), func(x int) int { return n }} }
+func equiv() evaluer       { return evaluer{"n", func(x int) int { return x }} }
+func mod(a, b evaluer) evaluer {
+	return evaluer{
+		fmt.Sprintf("%s%%%s", a, b),
+		func(x int) int { return a.Eval(x) % b.Eval(x) },
+	}
+}
+
+type parenthes struct {
+	rule PluralRule
+}
+
+func (p parenthes) Check(n int) bool {
+
+	return p.rule.Check(n)
+}
+
+func (p parenthes) String() string {
+
+	return fmt.Sprintf("(%s)", p.rule)
+}
+
+type checker struct {
+	op    string
+	a, b  fmt.Stringer
+	check func(int) bool
+}
+
+func (cr checker) String() string {
+
+	return fmt.Sprintf("%s %s %s", cr.a, cr.op, cr.b)
+}
+
+func (cr checker) Check(n int) bool {
+
+	return cr.check(n)
+}
+
+func eql(a, b evaluer) PluralRule {
+
+	return checker{
+		"==", a, b,
+		func(n int) bool { return a.Eval(n) == b.Eval(n) },
+	}
+}
+func neq(a, b evaluer) PluralRule {
+
+	return checker{
+		"!=", a, b,
+		func(n int) bool { return a.Eval(n) != b.Eval(n) },
+	}
+}
+func gtr(a, b evaluer) PluralRule {
+
+	return checker{
+		">", a, b,
+		func(n int) bool { return a.Eval(n) > b.Eval(n) },
+	}
+}
+func geq(a, b evaluer) PluralRule {
+
+	return checker{
+		">=", a, b,
+		func(n int) bool { return a.Eval(n) >= b.Eval(n) },
+	}
+}
+func lss(a, b evaluer) PluralRule {
+
+	return checker{
+		"<", a, b,
+		func(n int) bool { return a.Eval(n) < b.Eval(n) },
+	}
+}
+func leq(a, b evaluer) PluralRule {
+
+	return checker{
+		"<=", a, b,
+		func(n int) bool { return a.Eval(n) <= b.Eval(n) },
+	}
+}
+func and(a, b PluralRule) PluralRule {
+
+	return checker{
+		"&&", a, b,
+		func(n int) bool { return a.Check(n) && b.Check(n) },
+	}
+}
+func or(a, b PluralRule) PluralRule {
+
+	return checker{
+		"||", a, b,
+		func(n int) bool { return a.Check(n) || b.Check(n) },
+	}
+}
 
 type ruleBuilder struct {
 	source string
@@ -56,7 +268,7 @@ func (cb ruleBuilder) Build() (PluralRule, error) {
 func (cb ruleBuilder) processExpression(expr ast.Expr) PluralRule {
 	switch te := expr.(type) {
 	case *ast.ParenExpr:
-		return cb.processExpression(te.X)
+		return parenthes{cb.processExpression(te.X)}
 
 	case *ast.BinaryExpr:
 		return cb.processComparsion(te)
@@ -121,7 +333,7 @@ func (cb ruleBuilder) processArithmetic(expr ast.Expr) evaluer {
 
 	cb.invalidExpr(expr)
 
-	return nil
+	return evaluer{}
 }
 
 func (cb ruleBuilder) invalidExpr(expr ast.Expr) {
