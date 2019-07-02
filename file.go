@@ -47,7 +47,7 @@ func (file *File) Update(next *File) *File {
 	index := muzzy.NewSplitIndex(muzzy.NGramSplitter(3, true))
 	entryID := func(entry Entry) string {
 		if entry.MsgIDP != "" {
-			return entry.MsgIDP
+			return entry.MsgID + "  \x00  " + entry.MsgIDP
 		}
 		return entry.MsgID
 	}
