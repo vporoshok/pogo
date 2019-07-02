@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
+	"github.com/vporoshok/muzzy"
 )
 
 // DefaultWidth of msgctxt, msgid and msgstr
@@ -43,29 +44,30 @@ func ReadFile(r io.Reader) (*File, error) {
 // Update file with next version of file
 func (file *File) Update(next *File) *File {
 	recycle := make([]bool, len(file.Entries))
-	existed := make(map[[3]string]int, len(file.Entries))
-	for i := range file.Entries {
-		key := [3]string{
-			file.Entries[i].MsgCtxt,
-			file.Entries[i].MsgID,
-			file.Entries[i].MsgIDP,
+	index := muzzy.NewSplitIndex(muzzy.NGramSplitter(3, true))
+	entryID := func(entry Entry) string {
+		if entry.MsgIDP != "" {
+			return entry.MsgIDP
 		}
-		existed[key] = i
+		return entry.MsgID
+	}
+
+	for i := range file.Entries {
+		index.Add(entryID(file.Entries[i]))
 	}
 
 	res := make([]Entry, len(next.Entries))
 	for i := range next.Entries {
-		key := [3]string{
-			next.Entries[i].MsgCtxt,
-			next.Entries[i].MsgID,
-			next.Entries[i].MsgIDP,
+		j := index.Search(entryID(next.Entries[i]))
+		if j >= 0 {
+			d := index.Similarity(entryID(file.Entries[j]), entryID(next.Entries[i]))
+			if d > 0.8 {
+				res[i] = file.Entries[j].Update(&next.Entries[i])
+				recycle[j] = true
+				continue
+			}
 		}
-		if j, ok := existed[key]; ok {
-			res[i] = file.Entries[j].Update(&next.Entries[i])
-			recycle[j] = true
-		} else {
-			res[i] = next.Entries[i]
-		}
+		res[i] = next.Entries[i]
 	}
 	for i, ok := range recycle {
 		if !ok {
