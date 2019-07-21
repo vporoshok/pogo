@@ -10,7 +10,6 @@ Library for work with PO-files
 
 ## Roadmap
 
-- Translator from po and mo-files
 - pogo cli:
   - extract resources
   - merge resources
