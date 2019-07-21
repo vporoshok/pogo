@@ -7,6 +7,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	magic uint32 = 0x950412de
+)
+
 var errMOFile = errors.New("invalid mo file")
 
 type position struct {
@@ -36,11 +40,11 @@ func (mr *moReader) Read() error {
 
 func (mr *moReader) mustRead() {
 	var (
-		magic, revision uint32
+		first, revision uint32
 	)
 
-	mr.mustReadUint32(&magic)
-	if magic != 0x950412de {
+	mr.mustReadUint32(&first)
+	if first != magic {
 		panic(errors.Wrap(errMOFile, "magic number mistmatch"))
 	}
 	mr.mustReadUint32(&revision)

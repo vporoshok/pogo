@@ -3,8 +3,6 @@ package pogo
 import (
 	"io"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -43,7 +41,8 @@ func ReadMOFile(r io.Reader) (*MOFile, error) {
 
 // Print file to writer
 func (file *MOFile) Write(w io.Writer) error {
-	return errors.New("not implemented")
+	mw := moWriter{w: w, file: file}
+	return mw.Write()
 }
 
 // Get translation by original
