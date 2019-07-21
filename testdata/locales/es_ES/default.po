@@ -1,0 +1,22 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Pogo 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/vporoshok/pogo\n"
+"Last-Translator: Evgeniy Bastrykov <vporoshok@gmail.com>\n"
+"Language: es_ES\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+msgid "Let’s make the web multilingual."
+msgstr "Hagamos la web multilingüe."
+
+msgctxt "header"
+msgid "Welcome back, %s! Your last visit was on %s"
+msgstr "¡Bienvenido, %s! Su última visita fue el %s"
+
+msgid "%d page read."
+msgid_plural "%d pages read."
+msgstr[0] "%d páginas debe decir."
+msgstr[1] "%d página para Leer"
