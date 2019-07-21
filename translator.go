@@ -80,8 +80,8 @@ func (fl fileLoader) getFile(lang, domain, ext string) (io.ReadCloser, error) {
 	filepath = strings.ReplaceAll(filepath, "{{ language }}", lang)
 	filepath = strings.ReplaceAll(filepath, "{{ domain }}", domain)
 	filepath = strings.ReplaceAll(filepath, "{{ ext }}", ext)
-	// nolint:gosec:next-line
-	return os.Open(filepath)
+
+	return os.Open(filepath) // nolint:gosec
 }
 
 // FileLoader standard loader po and mo files from disk

@@ -40,7 +40,7 @@ func TestFlagsText(t *testing.T) {
 
 	var flags pogo.Flags
 	for _, c := range cases {
-		// nolint:scopelint
+		c := c
 		t.Run(c.name, func(t *testing.T) {
 			flags.Parse(c.source)
 			assert.Equal(t, c.result, flags.String())

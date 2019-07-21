@@ -65,7 +65,9 @@ func (s *TranslatorSuite) TestLogger() {
 	ctx := context.Background()
 	msg := tr.Translate(ctx, "Let’s make the web multilingual.")
 	s.Equal("Let’s make the web multilingual.", msg)
-	s.Equal("error on load locale \"de_DE/default\": open testdata/locales/de/default.po: no such file or directory\n", buf.String())
+	s.Equal("error on load locale \"de_DE/default\":"+
+		" open testdata/locales/de/default.po: no such file or directory\n",
+		buf.String())
 }
 
 func (s *TranslatorSuite) Pattern() string {
