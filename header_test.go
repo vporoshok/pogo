@@ -44,7 +44,7 @@ func TestHeader(t *testing.T) {
 		`"MIME-Version: 1.0\n"`,
 	)))
 
-	entry, err := pogo.ReadEntry(s, 0)
+	entry, err := pogo.ReadPOEntry(s, 0)
 	require.Equal(t, io.EOF, errors.Cause(err))
 
 	header := pogo.Header{}

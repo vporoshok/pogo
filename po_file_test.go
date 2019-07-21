@@ -107,9 +107,9 @@ func TestFileMerge(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
-			curr, err := pogo.ReadFile(bytes.NewBufferString(c.curr))
+			curr, err := pogo.ReadPOFile(bytes.NewBufferString(c.curr))
 			require.NoError(t, err)
-			next, err := pogo.ReadFile(bytes.NewBufferString(c.next))
+			next, err := pogo.ReadPOFile(bytes.NewBufferString(c.next))
 			require.NoError(t, err)
 			result := curr.Update(next)
 			b := &bytes.Buffer{}

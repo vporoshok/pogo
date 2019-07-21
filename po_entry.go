@@ -11,8 +11,8 @@ import (
 
 const prevBorder = "#| "
 
-// Entry present one message
-type Entry struct {
+// POEntry present one message
+type POEntry struct {
 	TComment    string
 	EComment    string
 	Reference   string
@@ -60,8 +60,8 @@ var poStarters = []Starter{
 	NewRegexpStarter("#~ ", `msgstr\[\d+\] `),
 }
 
-// ReadEntry from scanner
-func ReadEntry(s *Scanner, pluralCount int) (entry Entry, err error) {
+// ReadPOEntry from scanner
+func ReadPOEntry(s *Scanner, pluralCount int) (entry POEntry, err error) {
 	s.Starters = poStarters
 	for {
 		err = s.Scan()
@@ -77,14 +77,14 @@ func ReadEntry(s *Scanner, pluralCount int) (entry Entry, err error) {
 	}
 }
 
-func (entry *Entry) applyBlock(s *Scanner, pluralCount int) (err error) {
+func (entry *POEntry) applyBlock(s *Scanner, pluralCount int) (err error) {
 	return recoverHandledError(func() {
 		entry.mustApplyBlock(s, pluralCount)
 	})
 }
 
 // nolint:gocyclo
-func (entry *Entry) mustApplyBlock(s *Scanner, pluralCount int) {
+func (entry *POEntry) mustApplyBlock(s *Scanner, pluralCount int) {
 	entry.checkObsolete(s)
 
 	switch [2]string{s.Border, s.Prefix} {
@@ -130,7 +130,7 @@ func (entry *Entry) mustApplyBlock(s *Scanner, pluralCount int) {
 	}
 }
 
-func (entry *Entry) checkObsolete(s *Scanner) {
+func (entry *POEntry) checkObsolete(s *Scanner) {
 	if s.Border == "#~ " {
 		if entry.Obsolete {
 			return
@@ -151,7 +151,7 @@ func (entry *Entry) checkObsolete(s *Scanner) {
 	}
 }
 
-func (entry *Entry) updateMsgStrP(s *Scanner, pluralCount int) {
+func (entry *POEntry) updateMsgStrP(s *Scanner, pluralCount int) {
 	if !strings.HasPrefix(s.Prefix, "msgstr[") {
 		fmt.Println(s.Prefix, s.Border, s.Buffer.String())
 		return
@@ -170,14 +170,14 @@ func (entry *Entry) updateMsgStrP(s *Scanner, pluralCount int) {
 	entry.MsgStrP[n] = s.Buffer.String()
 }
 
-func (Entry) mustBeEmpty(s *Scanner, text string) {
+func (POEntry) mustBeEmpty(s *Scanner, text string) {
 	if text != "" {
 		panic(errors.Errorf("duplicate block %q at %d", s.Border+s.Prefix, s.Line))
 	}
 }
 
 // Print entry in PO format
-func (entry *Entry) Print(f *Formatter, width int) error {
+func (entry *POEntry) Print(f *Formatter, width int) error {
 
 	return recoverHandledError(func() {
 		entry.mustPrint(f, width)
@@ -185,7 +185,7 @@ func (entry *Entry) Print(f *Formatter, width int) error {
 }
 
 // nolint:gocyclo
-func (entry *Entry) mustPrint(f *Formatter, width int) {
+func (entry *POEntry) mustPrint(f *Formatter, width int) {
 	mustFormat := func(text string) {
 		if err := f.Format(text); err != nil {
 			panic(err)
@@ -248,7 +248,7 @@ func (entry *Entry) mustPrint(f *Formatter, width int) {
 }
 
 // Update return merge result of entry with next version
-func (entry *Entry) Update(next *Entry) Entry {
+func (entry *POEntry) Update(next *POEntry) POEntry {
 	res := *entry
 	res.EComment = next.EComment
 	if res.MsgCtxt != next.MsgCtxt {

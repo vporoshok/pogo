@@ -10,20 +10,20 @@ import (
 // DefaultWidth of msgctxt, msgid and msgstr
 const DefaultWidth = 80
 
-// File represents an po file
-type File struct {
-	Header  Header
-	Entries []Entry
+// POFile represents an po file
+type POFile struct {
+	Header
+	Entries []POEntry
 }
 
-// ReadFile from reader
-func ReadFile(r io.Reader) (*File, error) {
-	file := &File{}
+// ReadPOFile from reader
+func ReadPOFile(r io.Reader) (*POFile, error) {
+	file := &POFile{}
 
 	s := NewScanner(r)
 	first := true
 	for {
-		entry, err := ReadEntry(s, file.Header.PluralForms.Len())
+		entry, err := ReadPOEntry(s, file.PluralForms.Len())
 		if err != nil && errors.Cause(err) != io.EOF {
 
 			return nil, err
@@ -42,10 +42,10 @@ func ReadFile(r io.Reader) (*File, error) {
 }
 
 // Update file with next version of file
-func (file *File) Update(next *File) *File {
+func (file *POFile) Update(next *POFile) *POFile {
 	recycle := make([]bool, len(file.Entries))
 	index := muzzy.NewSplitIndex(muzzy.NGramSplitter(3, true))
-	entryID := func(entry Entry) string {
+	entryID := func(entry POEntry) string {
 		if entry.MsgIDP != "" {
 			return entry.MsgID + "  \x00  " + entry.MsgIDP
 		}
@@ -56,7 +56,7 @@ func (file *File) Update(next *File) *File {
 		index.Add(entryID(file.Entries[i]))
 	}
 
-	res := make([]Entry, len(next.Entries))
+	res := make([]POEntry, len(next.Entries))
 	for i := range next.Entries {
 		j := index.Search(entryID(next.Entries[i]))
 		if j >= 0 {
@@ -77,14 +77,14 @@ func (file *File) Update(next *File) *File {
 		}
 	}
 
-	return &File{
+	return &POFile{
 		Header:  file.Header,
 		Entries: res,
 	}
 }
 
 // Print file to writer
-func (file *File) Print(w io.Writer) error {
+func (file *POFile) Print(w io.Writer) error {
 	f := NewFormatter(w)
 	header := file.Header.ToEntry()
 	if err := header.Print(f, DefaultWidth); err != nil {

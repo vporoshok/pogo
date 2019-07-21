@@ -65,10 +65,16 @@ type Header struct {
 }
 
 // FromEntry parse entry as header
-func (header *Header) FromEntry(entry *Entry) {
+func (header *Header) FromEntry(entry *POEntry) {
 	header.parseEntryComment(entry.TComment)
 	header.Fuzzy = entry.Flags.Contain("fuzzy")
 	header.parseEntryMsgStr(entry.MsgStr)
+	if header.ContentType == "" {
+		header.ContentType = "text/plain; charset=UTF-8"
+	}
+	if header.ContentTransferEncoding == "" {
+		header.ContentTransferEncoding = "8bit"
+	}
 }
 
 func (header *Header) parseEntryComment(comment string) {
@@ -138,8 +144,8 @@ func (header *Header) parseKeyValue(key, val string) {
 }
 
 // ToEntry format header to entry fields
-func (header *Header) ToEntry() Entry {
-	entry := Entry{}
+func (header *Header) ToEntry() POEntry {
+	entry := POEntry{}
 	entry.TComment = header.getEntryComment()
 	if header.Fuzzy {
 		entry.Flags.Add("fuzzy")

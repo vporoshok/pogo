@@ -13,7 +13,7 @@ import (
 	"github.com/vporoshok/pogo"
 )
 
-func TestReadEntry(t *testing.T) {
+func TestReadPOEntry(t *testing.T) {
 	t.Parallel()
 
 	join := func(lines ...string) string {
@@ -69,7 +69,7 @@ func TestReadEntry(t *testing.T) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			s := pogo.NewScanner(bytes.NewBufferString(c.source))
-			entry, err := pogo.ReadEntry(s, c.plural)
+			entry, err := pogo.ReadPOEntry(s, c.plural)
 			if c.err != "" {
 				assert.EqualError(t, err, c.err)
 				return
