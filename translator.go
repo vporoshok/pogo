@@ -77,9 +77,9 @@ func (fl fileLoader) load(lang, domain string) (Locale, error) {
 
 func (fl fileLoader) getFile(lang, domain, ext string) (io.ReadCloser, error) {
 	filepath := fl.pattern
-	filepath = strings.ReplaceAll(filepath, "{{ language }}", lang)
-	filepath = strings.ReplaceAll(filepath, "{{ domain }}", domain)
-	filepath = strings.ReplaceAll(filepath, "{{ ext }}", ext)
+	filepath = strings.Replace(filepath, "{{ language }}", lang, -1) // nolint:gocritic
+	filepath = strings.Replace(filepath, "{{ domain }}", domain, -1) // nolint:gocritic
+	filepath = strings.Replace(filepath, "{{ ext }}", ext, -1)       // nolint:gocritic
 
 	return os.Open(filepath) // nolint:gosec
 }
