@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gotest.tools/golden"
 
 	"github.com/vporoshok/pogo"
 )
@@ -117,4 +118,15 @@ func TestFileMerge(t *testing.T) {
 			assert.Equal(t, c.result, b.String())
 		})
 	}
+}
+
+func TestPOtoMO(t *testing.T) {
+	data := golden.Get(t, "example.po")
+	buf := bytes.NewBuffer(data)
+	po, err := pogo.ReadPOFile(buf)
+	require.NoError(t, err)
+	mo := po.MO()
+	res := new(bytes.Buffer)
+	require.NoError(t, mo.Write(res))
+	golden.AssertBytes(t, res.Bytes(), "example_output.mo")
 }
