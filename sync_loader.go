@@ -12,7 +12,7 @@ func (sl *syncLoader) Load(key interface{}, fn func() interface{}) interface{} {
 	if value, ok := sl.m.Load(key); ok {
 		return sl.await(key, value)
 	}
-	var ch wait = make(chan struct{})
+	var ch = make(wait)
 
 	if value, ok := sl.m.LoadOrStore(key, ch); ok {
 		close(ch)
