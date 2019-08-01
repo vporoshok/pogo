@@ -78,7 +78,7 @@ func (po *POFile) Update(next *POFile) *POFile {
 	}
 
 	return &POFile{
-		Header:  po.Header,
+		Header:  next.Header,
 		Entries: res,
 	}
 }
