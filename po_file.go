@@ -72,8 +72,10 @@ func (po *POFile) Update(next *POFile) *POFile {
 	for i, ok := range recycle {
 		if !ok {
 			entry := po.Entries[i]
-			entry.Obsolete = true
-			res = append(res, entry)
+			if !entry.Obsolete {
+				entry.Obsolete = true
+				res = append(res, entry)
+			}
 		}
 	}
 

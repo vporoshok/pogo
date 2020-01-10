@@ -40,6 +40,18 @@ func TestFileMerge(t *testing.T) {
 		name, curr, next, result string
 	}{
 		{
+			"unchanged",
+			join(header,
+				`#, fuzzy`, `#~ msgctxt "foo"`, `#~ msgid "Two"`, `#~ msgstr "Два"`, ``,
+				`#, fuzzy`, `#~ msgctxt "bar"`, `#~ msgid "Two"`, `#~ msgstr "Два"`, ``,
+			),
+			join(header,
+				`#, fuzzy`, `#~ msgctxt "foo"`, `#~ msgid "Two"`, `#~ msgstr "Два"`, ``),
+			join(header,
+				`#, fuzzy`, `#~ msgctxt "foo"`, `#~ msgid "Two"`, `#~ msgstr "Два"`, ``,
+			),
+		},
+		{
 			"updated",
 			join(header,
 				`# Comment`, `msgid "One"`, `msgstr "Один"`, ``,
@@ -93,14 +105,14 @@ func TestFileMerge(t *testing.T) {
 			"removed",
 			join(header,
 				`msgid "One"`, `msgstr "Один"`, ``,
-				`msgid "Two"`, `msgstr "Два"`, ``,
+				`#, fuzzy`, `msgctxt "test"`, `msgid "Two"`, `msgstr "Два"`, ``,
 			),
 			join(header,
 				`msgid "One"`, `msgstr ""`, ``,
 			),
 			join(header,
 				`msgid "One"`, `msgstr "Один"`, ``,
-				`#~ msgid "Two"`, `#~ msgstr "Два"`, ``,
+				`#, fuzzy`, `#~ msgctxt "test"`, `#~ msgid "Two"`, `#~ msgstr "Два"`, ``,
 			),
 		},
 	}
