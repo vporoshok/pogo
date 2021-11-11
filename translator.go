@@ -23,7 +23,6 @@ func LanguageFromContext(ctx context.Context) (string, bool) {
 
 // ContextWithLanguage store language name in context
 func ContextWithLanguage(ctx context.Context, lang string) context.Context {
-
 	return context.WithValue(ctx, langCtxKey{}, lang)
 }
 
@@ -77,11 +76,11 @@ func (fl fileLoader) load(lang, domain string) (Locale, error) {
 
 func (fl fileLoader) getFile(lang, domain, ext string) (io.ReadCloser, error) {
 	filepath := fl.pattern
-	filepath = strings.Replace(filepath, "{{ language }}", lang, -1) // nolint:gocritic
-	filepath = strings.Replace(filepath, "{{ domain }}", domain, -1) // nolint:gocritic
-	filepath = strings.Replace(filepath, "{{ ext }}", ext, -1)       // nolint:gocritic
+	filepath = strings.Replace(filepath, "{{ language }}", lang, -1) //nolint:gocritic // backward compatibility
+	filepath = strings.Replace(filepath, "{{ domain }}", domain, -1) //nolint:gocritic // backward compatibility
+	filepath = strings.Replace(filepath, "{{ ext }}", ext, -1)       //nolint:gocritic // backward compatibility
 
-	return os.Open(filepath) // nolint:gosec
+	return os.Open(filepath) //nolint:gosec // it is just library
 }
 
 // FileLoader standard loader po and mo files from disk
@@ -103,7 +102,6 @@ func (fl fileLoader) getFile(lang, domain, ext string) (io.ReadCloser, error) {
 // 3. "./data/locales/ru/default.mo";
 // 4. "./data/locales/ru/default.po";
 func FileLoader(pattern string) Loader {
-
 	return fileLoader{pattern}
 }
 
@@ -182,7 +180,6 @@ func (fn fnTranslateOption) apply(cfg translateConfig) translateConfig {
 func WithDomain(domain string) TranslateOption {
 	return fnTranslateOption(func(cfg translateConfig) translateConfig {
 		cfg.domain = domain
-
 		return cfg
 	})
 }
@@ -191,7 +188,6 @@ func WithDomain(domain string) TranslateOption {
 func WithContext(ctxt string) TranslateOption {
 	return fnTranslateOption(func(cfg translateConfig) translateConfig {
 		cfg.ctxt = ctxt
-
 		return cfg
 	})
 }
@@ -201,7 +197,6 @@ func WithPlural(pluralForm string, n int) TranslateOption {
 	return fnTranslateOption(func(cfg translateConfig) translateConfig {
 		cfg.pluralN = n
 		cfg.pluralID = pluralForm
-
 		return cfg
 	})
 }
@@ -212,14 +207,12 @@ func WithGoFormat(args ...interface{}) TranslateOption {
 		cfg.formatter = func(msg string) (string, error) {
 			return fmt.Sprintf(msg, args...), nil
 		}
-
 		return cfg
 	})
 }
 
 // WithGoTemplate format message as text/template
 func WithGoTemplate(data interface{}) TranslateOption {
-
 	return fnTranslateOption(func(cfg translateConfig) translateConfig {
 		cfg.formatter = func(msg string) (string, error) {
 			tmpl, err := template.New("").Parse(msg)
@@ -232,7 +225,6 @@ func WithGoTemplate(data interface{}) TranslateOption {
 			}
 			return res.String(), nil
 		}
-
 		return cfg
 	})
 }
@@ -253,10 +245,8 @@ func (t *Translator) Translate(ctx context.Context, msg string, opts ...Translat
 	}
 	str := t.getMessage(lang, msg, cfg)
 	if cfg.formatter == nil {
-
 		return str
 	}
-
 	res, err := cfg.formatter(str)
 	if err != nil {
 		t.logger.Printf("error on format message %q: %+v", str, err)

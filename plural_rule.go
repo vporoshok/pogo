@@ -24,7 +24,6 @@ type PluralRules []PluralRule
 func (rules PluralRules) Eval(n int) int {
 	if len(rules) == 1 {
 		if rules[0].Check(n) {
-
 			return 1
 		}
 
@@ -32,7 +31,6 @@ func (rules PluralRules) Eval(n int) int {
 	}
 	for i := range rules {
 		if rules[i].Check(n) {
-
 			return i
 		}
 	}
@@ -42,7 +40,6 @@ func (rules PluralRules) Eval(n int) int {
 
 // Len is a number of rules
 func (rules PluralRules) Len() int {
-
 	return len(rules) + 1
 }
 
@@ -66,7 +63,6 @@ func (rules PluralRules) String() string {
 func ParsePluralRules(source string) (PluralRules, error) {
 	sub := pluralAllRE.FindStringSubmatch(source)
 	if len(sub) != 3 {
-
 		return nil, errors.New("invalid source format")
 	}
 	n, _ := strconv.Atoi(sub[1])
@@ -78,11 +74,9 @@ func ParsePluralRules(source string) (PluralRules, error) {
 	case 1:
 		k, err := strconv.Atoi(strings.TrimSpace(sub[2]))
 		if err != nil {
-
 			return nil, errors.WithStack(err)
 		}
 		if k != 0 {
-
 			return nil, errors.Errorf("unexpected choice %d, expected 0", k)
 		}
 
@@ -91,7 +85,6 @@ func ParsePluralRules(source string) (PluralRules, error) {
 	case 2:
 		rule, err := ParsePluralRule(sub[2])
 		if err != nil {
-
 			return nil, err
 		}
 
@@ -106,31 +99,26 @@ func ParsePluralRules(source string) (PluralRules, error) {
 func parsePluralRules(source string, n int) (PluralRules, error) {
 	subs := pluralRuleRE.FindAllStringSubmatch(source, -1)
 	if len(subs) != n-1 {
-
 		return nil, errors.New("rules count missmatch")
 	}
 	res := make(PluralRules, n-1)
 	for i, sub := range subs {
 		k, _ := strconv.Atoi(sub[2])
 		if k != i {
-
 			return nil, errors.Errorf("unexpected choice %d, expected %d", k, i)
 		}
 		if i == n-2 {
 			o, _ := strconv.Atoi(sub[4])
 			if o != n-1 {
-
 				return nil, errors.Errorf("unexpected choice %d, expected %d", o, n-1)
 			}
 		}
 		rule, err := ParsePluralRule(strings.TrimSpace(sub[1]))
 		if err != nil {
-
 			return nil, err
 		}
 		res[i] = rule
 	}
-
 	return res, nil
 }
 
@@ -142,7 +130,6 @@ type PluralRule interface {
 
 // ParsePluralRule from source
 func ParsePluralRule(source string) (PluralRule, error) {
-
 	return ruleBuilder{source}.Build()
 }
 
@@ -152,7 +139,6 @@ type evaluer struct {
 }
 
 func (e evaluer) String() string {
-
 	return e.source
 }
 
@@ -170,12 +156,10 @@ type parenthes struct {
 }
 
 func (p parenthes) Check(n int) bool {
-
 	return p.rule.Check(n)
 }
 
 func (p parenthes) String() string {
-
 	return fmt.Sprintf("(%s)", p.rule)
 }
 
@@ -186,66 +170,63 @@ type checker struct {
 }
 
 func (cr checker) String() string {
-
 	return fmt.Sprintf("%s %s %s", cr.a, cr.op, cr.b)
 }
 
 func (cr checker) Check(n int) bool {
-
 	return cr.check(n)
 }
 
 func eql(a, b evaluer) PluralRule {
-
 	return checker{
 		"==", a, b,
 		func(n int) bool { return a.Eval(n) == b.Eval(n) },
 	}
 }
-func neq(a, b evaluer) PluralRule {
 
+func neq(a, b evaluer) PluralRule {
 	return checker{
 		"!=", a, b,
 		func(n int) bool { return a.Eval(n) != b.Eval(n) },
 	}
 }
-func gtr(a, b evaluer) PluralRule {
 
+func gtr(a, b evaluer) PluralRule {
 	return checker{
 		">", a, b,
 		func(n int) bool { return a.Eval(n) > b.Eval(n) },
 	}
 }
-func geq(a, b evaluer) PluralRule {
 
+func geq(a, b evaluer) PluralRule {
 	return checker{
 		">=", a, b,
 		func(n int) bool { return a.Eval(n) >= b.Eval(n) },
 	}
 }
-func lss(a, b evaluer) PluralRule {
 
+func lss(a, b evaluer) PluralRule {
 	return checker{
 		"<", a, b,
 		func(n int) bool { return a.Eval(n) < b.Eval(n) },
 	}
 }
-func leq(a, b evaluer) PluralRule {
 
+func leq(a, b evaluer) PluralRule {
 	return checker{
 		"<=", a, b,
 		func(n int) bool { return a.Eval(n) <= b.Eval(n) },
 	}
 }
-func and(a, b PluralRule) PluralRule {
 
+func and(a, b PluralRule) PluralRule {
 	return checker{
 		"&&", a, b,
 		func(n int) bool { return a.Check(n) && b.Check(n) },
 	}
 }
-func or(a, b PluralRule) PluralRule {
 
+func or(a, b PluralRule) PluralRule {
 	return checker{
 		"||", a, b,
 		func(n int) bool { return a.Check(n) || b.Check(n) },
@@ -259,7 +240,6 @@ type ruleBuilder struct {
 func (cb ruleBuilder) Build() (PluralRule, error) {
 	expr, err := parser.ParseExpr(cb.source)
 	if err != nil {
-
 		return nil, errors.WithStack(err)
 	}
 
@@ -281,13 +261,11 @@ func (cb ruleBuilder) processExpression(expr ast.Expr) PluralRule {
 	}
 
 	cb.invalidExpr(expr)
-
 	return nil
 }
 
 func (cb ruleBuilder) processComparsion(expr *ast.BinaryExpr) PluralRule {
 	switch expr.Op {
-
 	case token.LAND:
 		return and(cb.processExpression(expr.X), cb.processExpression(expr.Y))
 
@@ -314,7 +292,6 @@ func (cb ruleBuilder) processComparsion(expr *ast.BinaryExpr) PluralRule {
 	}
 
 	cb.invalidExpr(expr)
-
 	return nil
 }
 
@@ -338,7 +315,6 @@ func (cb ruleBuilder) processArithmetic(expr ast.Expr) evaluer {
 	}
 
 	cb.invalidExpr(expr)
-
 	return evaluer{}
 }
 

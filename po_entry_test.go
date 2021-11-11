@@ -17,7 +17,6 @@ func TestReadPOEntry(t *testing.T) {
 	t.Parallel()
 
 	join := func(lines ...string) string {
-
 		return strings.Join(lines, "\n")
 	}
 

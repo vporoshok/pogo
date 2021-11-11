@@ -23,7 +23,6 @@ type Formatter struct {
 
 // NewFormatter to write in w
 func NewFormatter(w io.Writer) *Formatter {
-
 	return &Formatter{
 		buffer: &bytes.Buffer{},
 		output: w,
@@ -32,7 +31,6 @@ func NewFormatter(w io.Writer) *Formatter {
 
 // Format text
 func (f *Formatter) Format(text string) error {
-
 	return recoverHandledError(func() {
 		f.mustFormat(text)
 	})
@@ -41,7 +39,6 @@ func (f *Formatter) Format(text string) error {
 // BreakLine add \n
 func (f *Formatter) BreakLine() error {
 	_, err := io.WriteString(f.output, "\n")
-
 	return errors.WithStack(err)
 }
 
@@ -54,12 +51,10 @@ func (f *Formatter) mustFormat(text string) {
 			f.mustWrite(f.output, "\"")
 			f.mustWrite(f.output, lines[0])
 			f.mustWrite(f.output, "\"\n")
-
 			return
 		}
 		f.mustWrite(f.output, "\"\"\n")
 	}
-
 	for _, line := range lines {
 		f.writeLine(line)
 	}
@@ -67,23 +62,18 @@ func (f *Formatter) mustFormat(text string) {
 
 func (f *Formatter) isOneQuotedLine(lines []string) bool {
 	if len(lines) != 1 {
-
 		return false
 	}
 	if f.Width < 1 {
-
 		return true
 	}
-
 	return len(f.Border)+len(f.Prefix)+2+len(lines[0]) <= f.Width
 }
 
 func (f *Formatter) splitLines(text string) []string {
 	if f.Prefix == "" {
-
 		return strings.Split(text, "\n")
 	}
-
 	return strings.SplitAfter(f.escape(text), "\\n")
 }
 
@@ -102,7 +92,6 @@ func (f *Formatter) len() int {
 	if f.Prefix != "" {
 		n += 2
 	}
-
 	return n
 }
 

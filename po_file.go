@@ -17,15 +17,14 @@ type POFile struct {
 }
 
 // ReadPOFile from reader
-func ReadPOFile(r io.Reader) (*POFile, error) {
+func ReadPOFile(r io.Reader, opts ...ScannerOption) (*POFile, error) {
 	po := &POFile{}
 
-	s := NewScanner(r)
+	s := NewScanner(r, opts...)
 	first := true
 	for {
 		entry, err := ReadPOEntry(s, po.PluralForms.Len())
 		if err != nil && errors.Cause(err) != io.EOF {
-
 			return nil, err
 		}
 		if entry.MsgID != "" {
@@ -35,7 +34,6 @@ func ReadPOFile(r io.Reader) (*POFile, error) {
 		}
 		first = false
 		if err != nil {
-
 			return po, nil
 		}
 	}
@@ -90,16 +88,13 @@ func (po *POFile) Print(w io.Writer) error {
 	f := NewFormatter(w)
 	header := po.Header.ToEntry()
 	if err := header.Print(f, DefaultWidth); err != nil {
-
 		return err
 	}
 	for i := range po.Entries {
 		if err := f.BreakLine(); err != nil {
-
 			return err
 		}
 		if err := po.Entries[i].Print(f, DefaultWidth); err != nil {
-
 			return err
 		}
 	}

@@ -116,7 +116,6 @@ func TestParsePluralRules(t *testing.T) {
 	t.Parallel()
 
 	join := func(chunks ...string) string {
-
 		return strings.Join(chunks, "")
 	}
 

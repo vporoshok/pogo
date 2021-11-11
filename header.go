@@ -37,7 +37,6 @@ func (person *Person) Parse(text string) {
 
 // String implements fmt.Stringer
 func (person Person) String() string {
-
 	return fmt.Sprintf("%s <%s>", person.Name, person.Email)
 }
 
@@ -115,7 +114,7 @@ func (header *Header) parseEntryMsgStr(text string) {
 	}
 }
 
-// nolint:gocyclo
+//nolint:gocyclo // it should be in one place
 func (header *Header) parseKeyValue(key, val string) {
 	switch key {
 	case "Project-Id-Version":

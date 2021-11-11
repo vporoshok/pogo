@@ -7,7 +7,6 @@ type Flags []string
 
 // String implements fmt.Stringer
 func (flags Flags) String() string {
-
 	return strings.Join(flags, ", ")
 }
 
@@ -32,11 +31,9 @@ func (flags *Flags) Parse(text string) {
 func (flags Flags) Contain(flag string) bool {
 	for i := range flags {
 		if flags[i] == flag {
-
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -45,11 +42,9 @@ func (flags Flags) Contain(flag string) bool {
 // Returns false if flags has already contain the flag.
 func (flags *Flags) Add(flag string) bool {
 	if flags.Contain(flag) {
-
 		return false
 	}
 	*flags = append(*flags, flag)
-
 	return true
 }
 
@@ -63,6 +58,5 @@ func (flags *Flags) Remove(flag string) bool {
 			return true
 		}
 	}
-
 	return false
 }

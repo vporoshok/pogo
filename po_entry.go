@@ -83,7 +83,7 @@ func (entry *POEntry) applyBlock(s *Scanner, pluralCount int) (err error) {
 	})
 }
 
-// nolint:gocyclo
+//nolint:gocyclo // it should be at one place
 func (entry *POEntry) mustApplyBlock(s *Scanner, pluralCount int) {
 	entry.checkObsolete(s)
 
@@ -178,13 +178,12 @@ func (POEntry) mustBeEmpty(s *Scanner, text string) {
 
 // Print entry in PO format
 func (entry *POEntry) Print(f *Formatter, width int) error {
-
 	return recoverHandledError(func() {
 		entry.mustPrint(f, width)
 	})
 }
 
-// nolint:gocyclo
+//nolint:gocyclo // it ahould be at one place
 func (entry *POEntry) mustPrint(f *Formatter, width int) {
 	mustFormat := func(text string) {
 		if err := f.Format(text); err != nil {

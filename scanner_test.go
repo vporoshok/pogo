@@ -16,7 +16,6 @@ func TestScanner(t *testing.T) {
 	t.Parallel()
 
 	join := func(lines ...string) string {
-
 		return strings.Join(lines, "\n")
 	}
 
@@ -114,7 +113,6 @@ func TestScannerError(t *testing.T) {
 	t.Parallel()
 
 	join := func(lines ...string) string {
-
 		return strings.Join(lines, "\n")
 	}
 

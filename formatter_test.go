@@ -16,7 +16,6 @@ func TestFormatter(t *testing.T) {
 	t.Parallel()
 
 	join := func(lines ...string) string {
-
 		return strings.Join(lines, "\n")
 	}
 
@@ -147,7 +146,6 @@ func TestFormatter(t *testing.T) {
 type brokenWriter struct{}
 
 func (brokenWriter) Write(_ []byte) (int, error) {
-
 	return 0, errors.New("error")
 }
 

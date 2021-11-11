@@ -26,24 +26,35 @@ type Scanner struct {
 	input *bufio.Scanner
 }
 
-// NewScanner to read from r
-func NewScanner(r io.Reader) *Scanner {
+// ScannerOption customize scanner
+type ScannerOption func(*Scanner)
 
-	return &Scanner{
+// WithBuffer replace internal bufio.Scanner buffer
+func WithBuffer(buf []byte, max int) ScannerOption {
+	return func(s *Scanner) {
+		s.input.Buffer(buf, max)
+	}
+}
+
+// NewScanner to read from r
+func NewScanner(r io.Reader, opts ...ScannerOption) *Scanner {
+	s := &Scanner{
 		Buffer: &bytes.Buffer{},
 		input:  bufio.NewScanner(r),
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // IsBlankLine return true if current line is blank
 func (s *Scanner) IsBlankLine() bool {
-
 	return s.input.Text() == ""
 }
 
 // Scan next block
 func (s *Scanner) Scan() error {
-
 	return recoverHandledError(s.mustScan)
 }
 
@@ -119,7 +130,6 @@ func (s *Scanner) mustWrite(text string) {
 }
 
 func (Scanner) unescape(text string) string {
-
 	return strings.NewReplacer(
 		"\\\\", "\\",
 		"\\n", "\n",
