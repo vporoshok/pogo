@@ -29,8 +29,6 @@ type POEntry struct {
 }
 
 var poStarters = []Starter{
-	// TComment
-	NewPlainStarter("# ", ""),
 	// EComment
 	NewPlainStarter("#. ", ""),
 	// Reference
@@ -58,6 +56,9 @@ var poStarters = []Starter{
 	// MsgStrP
 	NewRegexpStarter("", `msgstr\[\d+\] `),
 	NewRegexpStarter("#~ ", `msgstr\[\d+\] `),
+	// TComment
+	NewPlainStarter("# ", ""),
+	NewPlainStarter("#", ""), // should be last in this list, because it match other starters
 }
 
 // ReadPOEntry from scanner
@@ -88,9 +89,11 @@ func (entry *POEntry) mustApplyBlock(s *Scanner, pluralCount int) {
 	entry.checkObsolete(s)
 
 	switch [2]string{s.Border, s.Prefix} {
-	case [2]string{"# ", ""}:
-		entry.mustBeEmpty(s, entry.TComment)
-		entry.TComment = s.Buffer.String()
+	case [2]string{"#", ""}, [2]string{"# ", ""}:
+		if entry.TComment != "" {
+			entry.TComment += "\n"
+		}
+		entry.TComment += s.Buffer.String()
 	case [2]string{"#. ", ""}:
 		entry.mustBeEmpty(s, entry.EComment)
 		entry.EComment = s.Buffer.String()

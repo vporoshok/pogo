@@ -62,6 +62,18 @@ func TestReadPOEntry(t *testing.T) {
 			plural: 2,
 			err:    "",
 		},
+		{
+			name: "empty line in comment",
+			source: join(
+				`# TComment`,
+				`#`,
+				`msgctxt "MsgCtxt"`,
+				`msgid "MsgID"`,
+				`msgstr "MsgStr"`,
+			),
+			plural: 2,
+			err:    "",
+		},
 	}
 
 	for _, c := range cases {
@@ -74,6 +86,7 @@ func TestReadPOEntry(t *testing.T) {
 				return
 			}
 			require.Equal(t, io.EOF, errors.Cause(err), err)
+			t.Logf("%q", entry.TComment)
 			b := &bytes.Buffer{}
 			f := pogo.NewFormatter(b)
 			require.NoError(t, entry.Print(f, 0))

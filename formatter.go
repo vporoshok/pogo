@@ -113,6 +113,11 @@ func (f *Formatter) flush() {
 	if f.buffer.Len() == 0 && f.Width > 0 {
 		return
 	}
+	if f.buffer.Len() == 0 && f.Prefix == "" {
+		f.mustWrite(f.output, strings.TrimRight(f.Border, " "))
+		f.mustWrite(f.output, "\n")
+		return
+	}
 	f.mustWrite(f.output, f.Border)
 	if f.Prefix != "" {
 		f.mustWrite(f.output, `"`)
